@@ -54,20 +54,82 @@ func (rm room) CountOccupied() int {
 
 func (rm room) VisibleNeighbours(row int, col int) int {
 
-	// Brute force!
+	directions := 0
+	next := make([]rune, 8)
+
+	// 1 2 3
+	// 0   4
+	// 7 6 5
+
+	for directions < 8 {
+		r, c := row, col
+		cont := true
+
+		for cont == true {
+			r, c, cont = rm.Next(r, c, directions)
+
+			if !cont {
+				// Don't need to continue - there's no more places to go
+				next[directions] = '.'
+			}
+
+			if rm[r][c] == '.' {
+				continue
+			}
+
+			next[directions] = rm[r][c]
+		}
+
+		directions++
+	}
+
 	count := 0
-
-	// Build a structure of arrays
-
-	for i := row - 1; i >= 0; i-- {
-		if rm[i][col] == '#' {
+	for _, ru := range next {
+		if ru == '#' {
 			count++
 		}
-
-		if rm[i][col] != '.' {
-			break
-		}
 	}
+
+	return count
+}
+
+func (rm room) Next(row int, col int, dir int) (int, int, bool) {
+
+	// 1 2 3
+	// 0   4
+	// 7 6 5
+
+	newrow := row
+	newcol := col
+
+	switch dir {
+	case 0:
+		newcol--
+	case 1:
+		newrow--
+		newcol--
+	case 2:
+		newrow--
+	case 3:
+		newrow--
+		newcol++
+	case 4:
+		newrow++
+	case 5:
+		newrow++
+		newcol++
+	case 6:
+		newrow++
+	case 7:
+		newrow++
+		newcol--
+	}
+
+	if newcol < 0 || newrow < 0 || newrow > len(rm) || newcol > len(rm[0]) {
+		return row, col, false
+	}
+
+	return newrow, newcol, true
 }
 
 func (rm room) OccupiedNeighbours(row int, col int) int {
@@ -103,11 +165,11 @@ func (rm room) OccupiedNeighbours(row int, col int) int {
 
 }
 
-func DeepCopyRoom(s [][]rune) [][]rune {
-	d := make([][]rune, len(s))
-	copy(d, s)
-	return d
-}
+// func DeepCopyRoom(s [][]rune) [][]rune {
+// 	d := make([][]rune, len(s))
+// 	copy(d, s)
+// 	return d
+// }
 
 func (rm room) RunGen() (room, int) {
 
@@ -126,6 +188,34 @@ func (rm room) RunGen() (room, int) {
 				next[i][j] = '#'
 				changes++
 			} else if seat == '#' && occ >= 4 {
+				next[i][j] = 'L'
+				changes++
+			} else {
+				next[i][j] = rm[i][j]
+			}
+		}
+	}
+
+	return next, changes
+}
+
+func (rm room) RunGenSecondRuleset() (room, int) {
+
+	changes := 0
+
+	next := make(room, len(rm))
+
+	for i := range next {
+		next[i] = make([]rune, len(rm[0]))
+	}
+
+	for i, row := range rm {
+		for j, seat := range row {
+			occ := rm.VisibleNeighbours(i, j)
+			if seat == 'L' && occ == 0 {
+				next[i][j] = '#'
+				changes++
+			} else if seat == '#' && occ >= 5 {
 				next[i][j] = 'L'
 				changes++
 			} else {
